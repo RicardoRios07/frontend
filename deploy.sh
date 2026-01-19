@@ -44,6 +44,67 @@ fi
 AVAILABLE_MEM=$(free -m 2>/dev/null | awk '/^Mem:/{print $7}' || echo "2000")
 echo "Memoria disponible: ${AVAILABLE_MEM}MB"
 
+# Verificar espacio en disco disponible (en GB)
+AVAILABLE_DISK=$(df -BG . | awk 'NR==2 {print $4}' | sed 's/G//')
+echo "Espacio en disco disponible: ${AVAILABLE_DISK}GB"
+
+if [ "$AVAILABLE_DISK" -lt 2 ]; then
+    echo -e "${RED}⚠️  ADVERTENCIA: Espacio en disco muy bajo (<2GB)${NC}"
+    echo ""
+    echo "El build de Next.js requiere al menos 1-2GB de espacio."
+    echo ""
+    echo -e "${YELLOW}Opciones:${NC}"
+    echo "1. Limpiar espacio en disco (npm cache, archivos temporales)"
+    echo "2. Instalar solo dependencias de producción"
+    echo "3. Ver qué está ocupando espacio"
+    echo "4. Salir y liberar espacio manualmente"
+    echo ""
+    read -p "Selecciona una opción [1]: " DISK_OPTION
+    DISK_OPTION=${DISK_OPTION:-1}
+    
+    case $DISK_OPTION in
+        1)
+            echo -e "${YELLOW}Limpiando espacio...${NC}"
+            # Limpiar cache de npm
+            npm cache clean --force 2>/dev/null || true
+            # Limpiar cache de pnpm si existe
+            pnpm store prune 2>/dev/null || true
+            # Limpiar archivos temporales
+            rm -rf /tmp/* 2>/dev/null || true
+            # Limpiar logs antiguos
+            find /var/log -name "*.log" -type f -mtime +7 -delete 2>/dev/null || true
+            
+            AVAILABLE_DISK=$(df -BG . | awk 'NR==2 {print $4}' | sed 's/G//')
+            echo -e "${GREEN}Limpieza completada. Espacio disponible: ${AVAILABLE_DISK}GB${NC}"
+            
+            if [ "$AVAILABLE_DISK" -lt 1 ]; then
+                echo -e "${RED}Todavía no hay suficiente espacio. Se requiere al menos 1GB libre.${NC}"
+                echo "Ejecuta: df -h para ver el uso de disco"
+                echo "Ejecuta: du -sh /* 2>/dev/null | sort -h para ver qué ocupa más espacio"
+                exit 1
+            fi
+            ;;
+        2)
+            echo -e "${YELLOW}Se instalarán solo dependencias de producción${NC}"
+            PRODUCTION_ONLY=true
+            ;;
+        3)
+            echo ""
+            echo "Uso de disco por directorio raíz:"
+            du -sh /* 2>/dev/null | sort -h | tail -10
+            echo ""
+            echo "Uso en el directorio actual:"
+            du -sh * 2>/dev/null | sort -h
+            echo ""
+            exit 0
+            ;;
+        *)
+            echo "Libera al menos 2GB de espacio y ejecuta el script nuevamente."
+            exit 1
+            ;;
+    esac
+fi
+
 # Decidir qué gestor de paquetes usar basado en la memoria
 USE_NPM=false
 if [ "$AVAILABLE_MEM" -lt 500 ]; then
@@ -88,15 +149,27 @@ if [ "$SKIP_INSTALL" != true ]; then
     
     if [ "$USE_NPM" = true ]; then
         echo "Usando npm (modo bajo consumo de memoria)..."
-        npm ci --production=false --prefer-offline --no-audit 2>/dev/null || npm install --prefer-offline --no-audit
+        if [ "$PRODUCTION_ONLY" = true ]; then
+            npm install --omit=dev --prefer-offline --no-audit
+        else
+            npm ci --production=false --prefer-offline --no-audit 2>/dev/null || npm install --prefer-offline --no-audit
+        fi
     else
         echo "Usando pnpm..."
         # Opciones para reducir uso de memoria
         if [ "$AVAILABLE_MEM" -lt 1000 ]; then
             echo "Modo bajo consumo de memoria activado"
-            pnpm install --frozen-lockfile --prefer-offline --reporter=silent || pnpm install --prefer-offline
+            if [ "$PRODUCTION_ONLY" = true ]; then
+                pnpm install --prod --frozen-lockfile --prefer-offline --reporter=silent || pnpm install --prod --prefer-offline
+            else
+                pnpm install --frozen-lockfile --prefer-offline --reporter=silent || pnpm install --prefer-offline
+            fi
         else
-            pnpm install
+            if [ "$PRODUCTION_ONLY" = true ]; then
+                pnpm install --prod
+            else
+                pnpm install
+            fi
         fi
     fi
     
