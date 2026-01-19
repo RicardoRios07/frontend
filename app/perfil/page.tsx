@@ -251,7 +251,7 @@ export default function ProfilePage() {
                         <span className="text-lg font-bold text-[#2ecc71]">${order.amount.toFixed(2)}</span>
                         {order.paymentStatus === "PAID" && (
                           <a
-                            href={`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001/api"}/orders/${
+                            href={`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://18.221.14.186:3001/api"}/orders/${
                               order._id
                             }/download`}
                             target="_blank"
