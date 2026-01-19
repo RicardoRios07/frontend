@@ -33,16 +33,32 @@ if [ ! -f "package.json" ]; then
     exit 1
 fi
 
-# Verificar Node.js y pnpm
+# Verificar Node.js y gestor de paquetes
 echo -e "${YELLOW}Verificando dependencias...${NC}"
 if ! command -v node &> /dev/null; then
     echo -e "${RED}Error: Node.js no está instalado${NC}"
     exit 1
 fi
 
-if ! command -v pnpm &> /dev/null; then
-    echo -e "${YELLOW}pnpm no encontrado. Instalando pnpm...${NC}"
-    npm install -g pnpm
+# Verificar memoria disponible (en MB)
+AVAILABLE_MEM=$(free -m 2>/dev/null | awk '/^Mem:/{print $7}' || echo "2000")
+echo "Memoria disponible: ${AVAILABLE_MEM}MB"
+
+# Decidir qué gestor de paquetes usar basado en la memoria
+USE_NPM=false
+if [ "$AVAILABLE_MEM" -lt 500 ]; then
+    echo -e "${YELLOW}⚠️  Memoria baja detectada (<500MB). Se usará npm en lugar de pnpm.${NC}"
+    USE_NPM=true
+elif ! command -v pnpm &> /dev/null; then
+    echo -e "${YELLOW}pnpm no encontrado. ¿Deseas instalar pnpm o usar npm? (p/n)${NC}"
+    read -p "Opción [p]: " -n 1 -r PKG_CHOICE
+    echo ""
+    if [[ $PKG_CHOICE =~ ^[Nn]$ ]]; then
+        USE_NPM=true
+    else
+        echo -e "${YELLOW}Instalando pnpm...${NC}"
+        npm install -g pnpm
+    fi
 fi
 
 # Verificar nginx
@@ -55,13 +71,55 @@ fi
 echo -e "${GREEN}✓ Todas las dependencias están instaladas${NC}"
 echo ""
 
-# Instalar dependencias
-echo -e "${YELLOW}Instalando dependencias del proyecto...${NC}"
-pnpm install
+# Verificar si node_modules existe
+if [ -d "node_modules" ]; then
+    echo -e "${YELLOW}node_modules ya existe. ¿Deseas reinstalar dependencias? (s/n)${NC}"
+    read -p "Opción [n]: " -n 1 -r REINSTALL
+    echo ""
+    if [[ ! $REINSTALL =~ ^[Ss]$ ]]; then
+        echo -e "${GREEN}✓ Omitiendo instalación de dependencias${NC}"
+        SKIP_INSTALL=true
+    fi
+fi
+
+# Instalar dependencias si es necesario
+if [ "$SKIP_INSTALL" != true ]; then
+    echo -e "${YELLOW}Instalando dependencias del proyecto...${NC}"
+    
+    if [ "$USE_NPM" = true ]; then
+        echo "Usando npm (modo bajo consumo de memoria)..."
+        npm ci --production=false --prefer-offline --no-audit 2>/dev/null || npm install --prefer-offline --no-audit
+    else
+        echo "Usando pnpm..."
+        # Opciones para reducir uso de memoria
+        if [ "$AVAILABLE_MEM" -lt 1000 ]; then
+            echo "Modo bajo consumo de memoria activado"
+            pnpm install --frozen-lockfile --prefer-offline --reporter=silent || pnpm install --prefer-offline
+        else
+            pnpm install
+        fi
+    fi
+    
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Error: Falló la instalación de dependencias${NC}"
+        echo -e "${YELLOW}Intentando con npm como alternativa...${NC}"
+        npm install --prefer-offline --no-audit
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}Error: No se pudieron instalar las dependencias${NC}"
+            exit 1
+        fi
+    fi
+fi
 
 # Build del proyecto
 echo -e "${YELLOW}Construyendo el proyecto...${NC}"
-pnpm run build
+
+# Usar el gestor de paquetes apropiado
+if [ "$USE_NPM" = true ]; then
+    npm run build
+else
+    pnpm run build 2>/dev/null || npm run build
+fi
 
 if [ ! -d ".next" ]; then
     echo -e "${RED}Error: El build falló. No se encontró el directorio .next${NC}"
@@ -214,7 +272,14 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         # Verificar si PM2 está instalado
         if command -v pm2 &> /dev/null; then
             pm2 delete $PROJECT_NAME 2>/dev/null || true
-            pm2 start "pnpm start" --name $PROJECT_NAME
+            
+            # Usar npm o pnpm según corresponda
+            if [ "$USE_NPM" = true ]; then
+                pm2 start "npm start" --name $PROJECT_NAME --max-memory-restart 512M
+            else
+                pm2 start "pnpm start" --name $PROJECT_NAME --max-memory-restart 512M
+            fi
+            
             pm2 save
             echo -e "${GREEN}✓ Servidor iniciado con PM2${NC}"
             echo ""
@@ -222,11 +287,16 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
             echo "  - Ver logs: pm2 logs $PROJECT_NAME"
             echo "  - Reiniciar: pm2 restart $PROJECT_NAME"
             echo "  - Detener: pm2 stop $PROJECT_NAME"
+            echo "  - Ver memoria: pm2 monit"
         else
             echo -e "${YELLOW}PM2 no está instalado. Iniciando servidor manualmente...${NC}"
             echo "Para instalarlo: npm install -g pm2"
             echo ""
-            echo "Ejecuta manualmente: pnpm start"
+            if [ "$USE_NPM" = true ]; then
+                echo "Ejecuta manualmente: npm start"
+            else
+                echo "Ejecuta manualmente: pnpm start"
+            fi
         fi
         
         echo ""
