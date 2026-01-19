@@ -103,7 +103,7 @@ export default function CatalogPage() {
     }
 
     return filtered
-  }, [selectedCategory, searchTerm, priceRange, sortBy])
+  }, [products, selectedCategory, searchTerm, priceRange, sortBy])
 
   return (
     <main className="min-h-screen bg-white">
