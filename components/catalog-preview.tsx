@@ -16,20 +16,62 @@ interface Product {
   authors: string[]
 }
 
+// Fallback data when API is unavailable
+const FALLBACK_PRODUCTS: Product[] = [
+  {
+    _id: "1",
+    title: "Guia de Productividad Personal",
+    synopsis: "Aprende tecnicas probadas para maximizar tu tiempo y alcanzar tus metas mas rapido.",
+    price: 9.99,
+    coverImage: "/productivity-book.jpg",
+    authors: ["Maria Gonzalez"],
+  },
+  {
+    _id: "2",
+    title: "Marketing Digital Avanzado",
+    synopsis: "Estrategias modernas de marketing digital para hacer crecer tu negocio en linea.",
+    price: 14.99,
+    coverImage: "/digital-marketing-book.jpg",
+    authors: ["Carlos Ramirez"],
+  },
+  {
+    _id: "3",
+    title: "Finanzas Personales 101",
+    synopsis: "Todo lo que necesitas saber para tomar control de tus finanzas y construir riqueza.",
+    price: 12.99,
+    coverImage: "/finance-basics-ebook.jpg",
+    authors: ["Ana Martinez"],
+  },
+  {
+    _id: "4",
+    title: "Programacion Python desde Cero",
+    synopsis: "Aprende a programar en Python desde los fundamentos hasta proyectos avanzados.",
+    price: 19.99,
+    coverImage: "/python-programming-guide.jpg",
+    authors: ["Luis Hernandez"],
+  },
+]
+
 export default function CatalogPreview() {
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const fetchProducts = async () => {
+      console.log("[v0] API_BASE:", API_BASE)
+      console.log("[v0] Fetching from:", `${API_BASE}/products?page=1&limit=4`)
       try {
         const res = await fetch(`${API_BASE}/products?page=1&limit=4`, { cache: "no-store" })
+        console.log("[v0] Response status:", res.status)
         if (!res.ok) throw new Error("Error loading products")
         const json = await res.json()
+        console.log("[v0] Response data:", json)
         const items = (json.data || json) as Product[]
         setProducts(items.slice(0, 4))
       } catch (error) {
-        console.error("Error fetching products:", error)
+        console.log("[v0] Fetch error:", error)
+        // Use fallback data when API is unavailable
+        setProducts(FALLBACK_PRODUCTS)
       } finally {
         setIsLoading(false)
       }

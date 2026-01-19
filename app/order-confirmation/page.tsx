@@ -300,3 +300,139 @@ export default function OrderConfirmationPage() {
     </Suspense>
   )
 }
+              <p className="text-sm text-gray-600 font-semibold uppercase mb-2">ID de Pedido</p>
+              <p className="text-2xl font-bold text-[#1f3a5f] font-mono">{order.id}</p>
+            </div>
+
+            {/* Customer Email */}
+            <div>
+              <p className="text-sm text-gray-600 font-semibold uppercase mb-2">Confirmación Enviada a</p>
+              <p className="text-lg font-semibold text-[#1f3a5f]">{order.customer.email}</p>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-300 pt-6">
+            <h2 className="font-bold text-[#1f3a5f] mb-4">Artículos Descargables</h2>
+            <div className="space-y-3">
+              {order.items.map((item) => (
+                <div key={item.id} className="bg-white rounded-lg p-4 flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <img
+                      src={item.image || "/placeholder.svg"}
+                      alt={item.title}
+                      className="w-16 h-16 object-cover rounded"
+                    />
+                  </div>
+
+                  <div className="flex-1">
+                    <h3 className="font-bold text-[#1f3a5f]">{item.title}</h3>
+                    <p className="text-sm text-gray-600 mt-1">Acceso digital inmediato · PDF + ePub + MOBI</p>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-2">
+                    <span className="font-bold text-[#1f3a5f]">${(item.price * item.quantity).toFixed(2)}</span>
+                    <button className="bg-[#2ecc71] hover:bg-[#27a85f] text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+                      <Download className="w-4 h-4" />
+                      Descargar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Download Instructions */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
+            <div className="w-12 h-12 bg-[#2ecc71] rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="font-bold text-[#1f3a5f] mb-2">Acceso Inmediato</h3>
+            <p className="text-sm text-gray-600">
+              Descarga tus guías en los formatos PDF, ePub y MOBI compatibles con cualquier dispositivo
+            </p>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
+            <div className="w-12 h-12 bg-[#4a90e2] rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="font-bold text-[#1f3a5f] mb-2">Acceso de por Vida</h3>
+            <p className="text-sm text-gray-600">
+              Una vez descargados, tienes acceso permanente a tus guías incluyendo todas las actualizaciones futuras
+            </p>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
+            <div className="w-12 h-12 bg-[#2ecc71] rounded-full flex items-center justify-center mx-auto mb-4">
+              <ArrowRight className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="font-bold text-[#1f3a5f] mb-2">Próximos Pasos</h3>
+            <p className="text-sm text-gray-600">
+              Revisa tu email para los enlaces de descarga y comienza tu aprendizaje hoy
+            </p>
+          </div>
+        </div>
+
+        {/* Order Summary */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
+          <div className="space-y-4 pb-4 border-b border-gray-200">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Subtotal</span>
+              <span className="font-semibold text-[#1f3a5f]">${order.total.toFixed(2)}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-gray-600">Impuestos digitales</span>
+              <span className="font-semibold text-[#2ecc71]">Gratis</span>
+            </div>
+          </div>
+
+          <div className="flex justify-between text-lg font-bold py-4 text-[#1f3a5f]">
+            <span>Total Pagado</span>
+            <span className="text-[#2ecc71]">${order.total.toFixed(2)}</span>
+          </div>
+        </div>
+
+        {/* Support Section */}
+        <div className="bg-blue-50 border border-[#4a90e2] rounded-lg p-6 mb-8">
+          <div className="flex gap-4">
+            <HelpCircle className="w-6 h-6 text-[#4a90e2] flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-bold text-[#1f3a5f] mb-2">¿Tienes problemas con la descarga?</h3>
+              <p className="text-[#333333] mb-3">
+                Si no puedes descargar tus guías, por favor contacta a nuestro equipo de soporte.
+              </p>
+              <Link
+                href="/soporte"
+                className="text-[#4a90e2] hover:text-[#3a7fcf] font-semibold flex items-center gap-2"
+              >
+                Contactar a Soporte <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* CTA Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Link
+            href="/catalogo"
+            className="flex-1 text-center bg-[#4a90e2] hover:bg-[#3a7fcf] text-white py-3 rounded-lg font-semibold transition-colors"
+          >
+            Continuar Comprando
+          </Link>
+
+          <Link
+            href="/"
+            className="flex-1 text-center border-2 border-[#1f3a5f] text-[#1f3a5f] hover:bg-[#f2f2f2] py-3 rounded-lg font-semibold transition-colors"
+          >
+            Volver al Inicio
+          </Link>
+        </div>
+      </div>
+
+      <Footer />
+    </main>
+  )
+}
