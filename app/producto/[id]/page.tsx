@@ -2,7 +2,7 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import AddToCartButton from "@/components/add-to-cart-button"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://18.221.14.186:3001/api"
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001/api"
 
 // Solo usar productos reales del API de MongoDB - sin fallbacks
 

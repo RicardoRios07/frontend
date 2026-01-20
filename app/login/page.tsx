@@ -54,7 +54,7 @@ export default function LoginPage() {
                 <p className="text-red-700 text-sm">{error}</p>
                 {error.includes("servidor") && (
                   <p className="text-red-600 text-xs mt-2">
-                    💡 Verifica que tu backend esté corriendo en http://18.221.14.186:3001
+                    💡 Verifica que tu backend esté corriendo en http://localhost:3001
                   </p>
                 )}
               </div>

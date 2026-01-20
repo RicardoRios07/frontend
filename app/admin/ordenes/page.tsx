@@ -38,7 +38,7 @@ export default function AdminOrders() {
         if (token) {
           apiClient.setToken(token)
         }
-        const response = await fetch("http://18.221.14.186:3001/api/admin/orders", {
+        const response = await fetch("http://localhost:3001/api/admin/orders", {
           headers: {
             Authorization: `Bearer ${token}`,
           },

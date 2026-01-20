@@ -197,7 +197,7 @@ export default function BibliotecaPage() {
                       {/* Actions */}
                       <div className="flex flex-col gap-2 lg:w-48">
                         <a
-                          href={`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://18.221.14.186:3001/api"}/orders/${order._id}/download`}
+                          href={`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001/api"}/orders/${order._id}/download`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="w-full bg-[#2ecc71] hover:bg-[#27a85f] text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
