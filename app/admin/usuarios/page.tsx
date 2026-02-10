@@ -30,7 +30,7 @@ export default function AdminUsers() {
         if (token) {
           apiClient.setToken(token)
         }
-        const response = await fetch("http://18.221.14.186:3001/api/admin/users", {
+        const response = await fetch("http://localhost:3001/api/admin/users", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -56,7 +56,7 @@ export default function AdminUsers() {
       if (token) {
         apiClient.setToken(token)
       }
-      await fetch(`http://18.221.14.186:3001/api/admin/users/${userId}/role`, {
+      await fetch(`http://localhost:3001/api/admin/users/${userId}/role`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
