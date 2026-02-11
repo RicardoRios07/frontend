@@ -28,7 +28,7 @@ export default function CatalogPage() {
   const [products, setProducts] = useState<CatalogProduct[]>([])
   const [selectedCategory, setSelectedCategory] = useState("Todos")
   const [searchTerm, setSearchTerm] = useState("")
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 50])
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 100])
   const [sortBy, setSortBy] = useState("relevance")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -39,26 +39,54 @@ export default function CatalogPage() {
       setIsLoading(true)
       setError(null)
       try {
+        console.log('[Catálogo] Cargando productos desde:', `${API_BASE}/products`)
         const res = await fetch(`${API_BASE}/products?page=1&limit=100`, { cache: "no-store" })
-        if (!res.ok) throw new Error("No se pudieron cargar los productos")
+        
+        if (!res.ok) {
+          throw new Error(`Error ${res.status}: No se pudieron cargar los productos`)
+        }
+        
         const json = await res.json()
-        const items = (json.data || json) as any[]
+        console.log('[Catálogo] Respuesta del servidor:', json)
+
+        // Manejar diferentes formatos de respuesta
+        let items = []
+        if (json.success && Array.isArray(json.data)) {
+          // Formato: { success: true, data: [...] }
+          items = json.data
+        } else if (Array.isArray(json.data)) {
+          // Formato: { data: [...] }
+          items = json.data
+        } else if (Array.isArray(json)) {
+          // Formato directo: [...]
+          items = json
+        } else if (json.success && json.data && typeof json.data === 'object') {
+          // Formato: { success: true, data: {...} } - un solo producto
+          items = [json.data]
+        } else if (json.data && typeof json.data === 'object') {
+          // Formato: { data: {...} } - un solo producto
+          items = [json.data]
+        }
+
+        console.log('[Catálogo] Productos procesados:', items.length)
 
         const mapped: CatalogProduct[] = items.map((p) => ({
-          id: p._id || p.id,  // Priorizar _id de MongoDB
-          title: p.title,
-          description: p.synopsis || p.description || "",
-          price: p.price || 0,
-          category: p.category || "libros",
-          image: p.coverImage || "/placeholder.svg",
+          id: p._id || p.id,
+          title: p.title || 'Sin título',
+          description: p.synopsis || p.description || '',
+          price: parseFloat(p.price) || 0,
+          category: p.category || 'Libros',
+          image: p.coverImage || '/placeholder.svg',
           rating: 4.7,
           reviews: 120,
         }))
 
-        if (mounted && mapped.length > 0) {
+        if (mounted) {
           setProducts(mapped)
+          console.log('[Catálogo] Productos cargados exitosamente:', mapped.length)
         }
       } catch (err: any) {
+        console.error('[Catálogo] Error al cargar productos:', err)
         if (mounted) {
           setError(err.message || "Error al cargar productos. Verifica que el backend esté corriendo.")
           setProducts([])
@@ -78,7 +106,10 @@ export default function CatalogPage() {
 
     // Filter by category
     if (selectedCategory !== "Todos") {
-      filtered = filtered.filter((p) => p.category === selectedCategory)
+      filtered = filtered.filter((p) => 
+        p.category.toLowerCase() === selectedCategory.toLowerCase() ||
+        p.category.toLowerCase().includes(selectedCategory.toLowerCase())
+      )
     }
 
     // Filter by search term
@@ -103,7 +134,7 @@ export default function CatalogPage() {
     }
 
     return filtered
-  }, [selectedCategory, searchTerm, priceRange, sortBy])
+  }, [products, selectedCategory, searchTerm, priceRange, sortBy])
 
   return (
     <main className="min-h-screen bg-white">
@@ -113,8 +144,21 @@ export default function CatalogPage() {
       <section className="bg-gradient-to-r from-[#1f3a5f] to-[#2d5a8f] text-white py-12">
         <div className="max-w-7xl mx-auto px-4">
           <h1 className="text-5xl font-bold mb-3">Catálogo de Libros Digitales</h1>
-          <p className="text-blue-100 text-lg">{isLoading ? "Cargando..." : `${filteredProducts.length} libros disponibles`}</p>
-          {error && <p className="text-red-200 text-sm mt-2">{error}</p>}
+          <p className="text-blue-100 text-lg">
+            {isLoading 
+              ? "Cargando productos..." 
+              : `${products.length} ${products.length === 1 ? 'libro disponible' : 'libros disponibles'}${
+                  filteredProducts.length !== products.length 
+                    ? ` (${filteredProducts.length} ${filteredProducts.length === 1 ? 'resultado' : 'resultados'} con filtros)` 
+                    : ''
+                }`
+            }
+          </p>
+          {error && (
+            <div className="mt-3 bg-red-500/20 border border-red-300 rounded-lg p-3">
+              <p className="text-red-100 text-sm">{error}</p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -167,7 +211,7 @@ export default function CatalogPage() {
                     <input
                       type="range"
                       min="0"
-                      max="20"
+                      max="100"
                       value={priceRange[1]}
                       onChange={(e) => setPriceRange([priceRange[0], Number.parseInt(e.target.value)])}
                       className="w-full accent-[#2ecc71]"
@@ -257,8 +301,43 @@ export default function CatalogPage() {
               </div>
             ) : (
               <div className="text-center py-16">
-                <h3 className="text-xl font-bold text-[#1f3a5f] mb-2">No se encontraron productos</h3>
-                <p className="text-gray-600">Intenta ajustar tus filtros de búsqueda</p>
+                {isLoading ? (
+                  <div className="space-y-4">
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#2ecc71] mx-auto"></div>
+                    <p className="text-gray-600">Cargando productos...</p>
+                  </div>
+                ) : products.length === 0 && !error ? (
+                  <div className="space-y-3">
+                    <h3 className="text-xl font-bold text-[#1f3a5f]">No hay productos disponibles</h3>
+                    <p className="text-gray-600">Pronto agregaremos nuevos libros digitales</p>
+                  </div>
+                ) : error ? (
+                  <div className="space-y-3">
+                    <h3 className="text-xl font-bold text-red-600">Error al cargar productos</h3>
+                    <p className="text-gray-600">{error}</p>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="mt-4 px-6 py-2 bg-[#2ecc71] text-white rounded-lg hover:bg-[#27ae60] transition-colors"
+                    >
+                      Reintentar
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <h3 className="text-xl font-bold text-[#1f3a5f]">No se encontraron productos</h3>
+                    <p className="text-gray-600">Intenta ajustar tus filtros de búsqueda</p>
+                    <button
+                      onClick={() => {
+                        setSearchTerm("")
+                        setSelectedCategory("Todos")
+                        setPriceRange([0, 100])
+                      }}
+                      className="mt-4 px-6 py-2 bg-[#2ecc71] text-white rounded-lg hover:bg-[#27ae60] transition-colors"
+                    >
+                      Limpiar filtros
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
