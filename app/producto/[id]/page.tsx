@@ -8,32 +8,53 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001/
 
 async function fetchProduct(id: string) {
   try {
+    console.log(`[Producto] Cargando producto con ID: ${id} desde ${API_BASE}/products/${id}`)
     const res = await fetch(`${API_BASE}/products/${id}`, { cache: "no-store" })
-    if (!res.ok) throw new Error("not found")
+    
+    if (!res.ok) {
+      console.error(`[Producto] Error ${res.status} al cargar producto:`, res.statusText)
+      throw new Error(`not found`)
+    }
+    
     const data = await res.json()
+    console.log(`[Producto] Datos recibidos:`, data)
+    
     // API responde { success, data }
     const product = data.data || data
+    
+    // Validar que tenemos datos válidos
+    if (!product || !product._id) {
+      console.error('[Producto] Producto sin _id:', product)
+      throw new Error('Invalid product data')
+    }
+    
     return {
-      id: product._id || product.id || id,  // Priorizar _id de MongoDB
+      id: product._id || product.id || id,
       title: product.title,
-      description: product.synopsis || product.description || "",
+      synopsis: product.synopsis || product.description || "",
+      authors: product.authors || [],
+      year: product.year || null,
       price: product.price || 0,
       category: product.category || "libros",
       image: product.coverImage || "/placeholder.svg",
     }
   } catch (err) {
-    console.error(`Error al cargar producto ${id}:`, err)
+    console.error(`[Producto] Error al cargar producto ${id}:`, err)
     return null
   }
 }
 
 interface PageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default async function ProductPage({ params }: PageProps) {
-  const product = await fetchProduct(params.id)
-  if (!product) return notFound()
+  const { id } = await params
+  const product = await fetchProduct(id)
+  if (!product) {
+    console.log(`[Producto] Producto no encontrado, mostrando 404 para ID: ${id}`)
+    return notFound()
+  }
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#f0f4ff] to-white">
@@ -50,26 +71,41 @@ export default async function ProductPage({ params }: PageProps) {
           <div className="space-y-2">
             <p className="text-sm text-[#4a90e2] font-semibold uppercase">{product.category}</p>
             <h1 className="text-3xl font-bold text-[#1f3a5f]">{product.title}</h1>
+            
+            {product.authors && product.authors.length > 0 && (
+              <p className="text-lg text-gray-600">
+                <span className="font-semibold">Autor{product.authors.length > 1 ? 'es' : ''}: </span>
+                {product.authors.join(', ')}
+              </p>
+            )}
+            
+            {product.year && (
+              <p className="text-sm text-gray-500">Año de publicación: {product.year}</p>
+            )}
           </div>
 
-          <p className="text-gray-700 leading-relaxed">{product.description || "Libro digital en formato PDF."}</p>
+          <div className="space-y-3">
+            <h2 className="text-xl font-semibold text-[#1f3a5f]">Sinopsis</h2>
+            <p className="text-gray-700 leading-relaxed whitespace-pre-line">{product.synopsis || "Libro digital en formato PDF."}</p>
+          </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 py-4 border-y border-gray-200">
             <span className="text-4xl font-bold text-[#1f3a5f]">${product.price.toFixed(2)}</span>
             <span className="text-sm text-gray-500">PDF descargable después del pago</span>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <AddToCartButton id={product.id as any} title={product.title} price={product.price} image={product.image} />
-            <Link href="/catalogo" className="text-[#1f3a5f] underline text-sm">
-              Volver al catálogo
+            <Link href="/catalogo" className="text-[#1f3a5f] underline text-sm hover:text-[#4a90e2] transition-colors">
+              ← Volver al catálogo
             </Link>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-lg p-4 text-sm text-gray-700 space-y-2">
-            <p>• Formato: PDF</p>
-            <p>• Enlace de pago gestionado con Payphone</p>
-            <p>• Descarga disponible tras confirmar el pago</p>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-gray-700 space-y-2">
+            <p className="font-semibold text-[#1f3a5f]">📦 Información del producto</p>
+            <p>• <strong>Formato:</strong> PDF descargable</p>
+            <p>• <strong>Disponibilidad:</strong> Inmediata tras confirmar el pago</p>
+            <p>• <strong>Pago:</strong> Procesado de forma segura con Payphone</p>
           </div>
         </div>
       </div>
