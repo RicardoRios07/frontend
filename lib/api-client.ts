@@ -10,7 +10,7 @@ type ApiErrorPayload = {
   errors?: unknown
 }
 
-export class APIClient {
+export class apiClient {
   private token: string | null = null
 
   setToken(token: string | null) {
