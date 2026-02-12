@@ -67,8 +67,8 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/terminos" className="hover:text-[#2ecc71] transition">
-                  Términos de Servicio
+                <Link href="/terminos-condiciones" className="hover:text-[#2ecc71] transition">
+                  Términos y Condiciones
                 </Link>
               </li>
             </ul>

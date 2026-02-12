@@ -8,13 +8,14 @@ import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, CheckCircle2 } from "lucide-react"
 
 export default function RegisterPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [acceptTerms, setAcceptTerms] = useState(false)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const { register } = useAuth()
@@ -23,6 +24,11 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+
+    if (!acceptTerms) {
+      setError("Debes aceptar los Términos y Condiciones para registrarte")
+      return
+    }
 
     if (password !== confirmPassword) {
       setError("Las contraseñas no coinciden")
@@ -114,7 +120,31 @@ export default function RegisterPage() {
               />
             </div>
 
-            <Button className="w-full bg-[#4a90e2] hover:bg-[#3a7bd5] text-white" disabled={isLoading}>
+            {/* Términos y Condiciones */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acceptTerms}
+                  onChange={(e) => setAcceptTerms(e.target.checked)}
+                  disabled={isLoading}
+                  className="w-5 h-5 mt-0.5 text-[#4a90e2] bg-white border-2 border-[#4a90e2] rounded cursor-pointer accent-[#4a90e2]"
+                />
+                <span className="text-sm text-gray-700">
+                  Acepto los{" "}
+                  <Link
+                    href="/terminos-condiciones"
+                    target="_blank"
+                    className="text-[#4a90e2] hover:text-[#3a7bd5] font-semibold underline"
+                  >
+                    Términos y Condiciones
+                  </Link>
+                  {" "}de DigitalBooks
+                </span>
+              </label>
+            </div>
+
+            <Button className="w-full bg-[#4a90e2] hover:bg-[#3a7bd5] text-white" disabled={isLoading || !acceptTerms}>
               {isLoading ? "Cargando..." : "Crear Cuenta"}
             </Button>
           </form>
