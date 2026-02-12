@@ -32,13 +32,15 @@ export default function AdminOrders() {
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
 
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001/api"
+
   useEffect(() => {
     const fetchOrders = async () => {
       try {
         if (token) {
           apiClient.setToken(token)
         }
-        const response = await fetch("http://localhost:3001/api/admin/orders", {
+        const response = await fetch(`${API_BASE}/admin/orders`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

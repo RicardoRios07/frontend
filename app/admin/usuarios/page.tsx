@@ -18,6 +18,8 @@ interface User {
   createdAt: string
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001/api"
+
 export default function AdminUsers() {
   const { token } = useAuth()
   const [users, setUsers] = useState<User[]>([])
@@ -30,7 +32,7 @@ export default function AdminUsers() {
         if (token) {
           apiClient.setToken(token)
         }
-        const response = await fetch("http://localhost:3001/api/admin/users", {
+        const response = await fetch(`${API_BASE}/admin/users`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -56,7 +58,7 @@ export default function AdminUsers() {
       if (token) {
         apiClient.setToken(token)
       }
-      await fetch(`http://localhost:3001/api/admin/users/${userId}/role`, {
+      await fetch(`${API_BASE}/admin/users/${userId}/role`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
