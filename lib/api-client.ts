@@ -151,6 +151,44 @@ export class APIClient {
   async getOrder(orderId: string) {
     return this.request(`/orders/${orderId}`)
   }
-}
 
-export const apiClient = new APIClient()
+  async downloadInvoice(orderId: string) {
+    const headers: HeadersInit = {}
+    
+    if (this.token) {
+      headers.Authorization = `Bearer ${this.token}`
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/download`, {
+        headers,
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al descargar el archivo')
+      }
+
+      // Obtener el nombre del archivo del header Content-Disposition
+      const contentDisposition = response.headers.get('Content-Disposition')
+      let filename = 'factura.pdf'
+      
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="?([^"]+)"?/)
+        if (match) filename = match[1]
+      }
+
+      // Convertir a blob y descargar
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error descargando factura:', error)
+      throw error
+    }
+  }

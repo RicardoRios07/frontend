@@ -29,6 +29,7 @@ export default function BibliotecaPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -196,15 +197,32 @@ export default function BibliotecaPage() {
 
                       {/* Actions */}
                       <div className="flex flex-col gap-2 lg:w-48">
-                        <a
-                          href={`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001/api"}/orders/${order._id}/download`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full bg-[#2ecc71] hover:bg-[#27a85f] text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                        <button
+                          onClick={async () => {
+                            try {
+                              setDownloadingId(order._id)
+                              await apiClient.downloadInvoice(order._id)
+                            } catch (err: any) {
+                              alert('Error al descargar: ' + err.message)
+                            } finally {
+                              setDownloadingId(null)
+                            }
+                          }}
+                          disabled={downloadingId === order._id}
+                          className="w-full bg-[#2ecc71] hover:bg-[#27a85f] disabled:bg-gray-400 text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
                         >
-                          <Download className="w-4 h-4" />
-                          Descargar PDF
-                        </a>
+                          {downloadingId === order._id ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Descargando...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="w-4 h-4" />
+                              Descargar PDF
+                            </>
+                          )}
+                        </button>
                         <button
                           className="w-full bg-white border-2 border-[#4a90e2] text-[#4a90e2] hover:bg-[#4a90e2] hover:text-white px-4 py-2 rounded-lg font-semibold transition-colors"
                         >

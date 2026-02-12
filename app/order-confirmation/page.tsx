@@ -61,12 +61,12 @@ function OrderConfirmationContent() {
           }),
         })
 
-        if (response.data.success) {
-          setConfirmation(response.data)
+        if (response.success) {
+          setConfirmation(response)
           // Limpiar el carrito solo si el pago fue exitoso
           clearCart()
         } else {
-          setError(response.data.message || 'Error al confirmar el pago')
+          setError(response.message || 'Error al confirmar el pago')
         }
       } catch (err: any) {
         console.error('Error confirmando pago:', err)

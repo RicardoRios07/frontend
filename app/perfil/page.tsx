@@ -28,6 +28,7 @@ export default function ProfilePage() {
   const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [ordersLoading, setOrdersLoading] = useState(true)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -250,17 +251,27 @@ export default function ProfilePage() {
                       <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                         <span className="text-lg font-bold text-[#2ecc71]">${order.amount.toFixed(2)}</span>
                         {order.paymentStatus === "PAID" && (
-                          <a
-                            href={`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001/api"}/orders/${
-                              order._id
-                            }/download`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[#4a90e2] hover:text-[#3a7fcf] text-sm font-semibold flex items-center gap-1"
+                          <button
+                            onClick={async () => {
+                              try {
+                                setDownloadingId(order._id)
+                                await apiClient.downloadInvoice(order._id)
+                              } catch (err: any) {
+                                alert('Error al descargar: ' + err.message)
+                              } finally {
+                                setDownloadingId(null)
+                              }
+                            }}
+                            disabled={downloadingId === order._id}
+                            className="text-[#4a90e2] hover:text-[#3a7fcf] disabled:text-gray-400 text-sm font-semibold flex items-center gap-1 cursor-pointer"
                           >
-                            <Download className="w-4 h-4" />
-                            Descargar
-                          </a>
+                            {downloadingId === order._id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4" />
+                            )}
+                            {downloadingId === order._id ? 'Descargando...' : 'Descargar'}
+                          </button>
                         )}
                       </div>
                     </div>
