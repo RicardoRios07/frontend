@@ -256,6 +256,43 @@ export class ApiClient {
     a.remove()
     window.URL.revokeObjectURL(objectUrl)
   }
+
+  async downloadPurchasedProduct(productId: string, title: string) {
+    const url = `${API_BASE_URL}/products/${encodeURIComponent(productId)}/download`
+
+    const headers: HeadersInit = {}
+    if (this.token) {
+      ; (headers as Record<string, string>)["Authorization"] = `Bearer ${this.token}`
+    }
+
+    try {
+      const response = await fetch(url, { headers })
+
+      if (!response.ok) {
+        // Try to parse error message
+        let errorMsg = `Error al descargar (HTTP ${response.status})`
+        try {
+          const data = await response.json()
+          errorMsg = data.message || errorMsg
+        } catch { }
+        throw new Error(errorMsg)
+      }
+
+      const blob = await response.blob()
+      const objectUrl = window.URL.createObjectURL(blob)
+
+      const a = document.createElement("a")
+      a.href = objectUrl
+      a.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => window.URL.revokeObjectURL(objectUrl), 100)
+    } catch (error) {
+      console.error("Download error:", error)
+      throw error
+    }
+  }
 }
 
 export const apiClient = new ApiClient()

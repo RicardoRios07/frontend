@@ -115,19 +115,13 @@ export default function BibliotecaPage() {
     }
   }, [user, token])
 
-  const handleDownload = (book: PurchasedBook) => {
-    if (!book.pdfUrl) {
-      alert("Este libro no tiene un PDF disponible para descargar.")
-      return
-    }
-
+  const handleDownload = async (book: PurchasedBook) => {
     try {
       setDownloadingId(book._id)
-      const url = apiClient.getFileUrl(book.pdfUrl)
-      window.open(url, '_blank')
+      await apiClient.downloadPurchasedProduct(book._id, book.title)
     } catch (err) {
       console.error("Error al descargar:", err)
-      alert("Error al intentar descargar el libro.")
+      alert("Error al intentar descargar el libro. Asegúrate de que el archivo existe.")
     } finally {
       setDownloadingId(null)
     }

@@ -13,8 +13,8 @@ export default function SoportePage() {
             <h2 className="text-xl font-semibold text-[#1f3a5f]">Contacto directo</h2>
             <p className="text-gray-700">Escríbenos y te responderemos en menos de 24 horas.</p>
             <ul className="text-sm text-gray-700 space-y-1">
-              <li>📧 Email: soporte@tu-tienda.com</li>
-              <li>💬 WhatsApp: +593 99 999 9999</li>
+              <li>📧 Email: marton2307@gmail.com</li>
+              <li>💬 WhatsApp: +593 989370890</li>
               <li>⏰ Horario: L-V 9:00 - 18:00</li>
             </ul>
           </div>
