@@ -1,4 +1,14 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001/api"
+// api-client.ts
+const normalizeBaseUrl = (url: string) => url.replace(/\/+$/, "")
+const API_BASE_URL = normalizeBaseUrl(
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001/api"
+)
+
+type ApiErrorPayload = {
+  message?: string
+  error?: string
+  errors?: unknown
+}
 
 export class APIClient {
   private token: string | null = null
@@ -7,46 +17,82 @@ export class APIClient {
     this.token = token
   }
 
-  async request(endpoint: string, options: RequestInit = {}) {
+  private buildHeaders(options: RequestInit): HeadersInit {
     const headers: HeadersInit = {
-      "Content-Type": "application/json",
       ...options.headers,
     }
 
-    if (this.token) {
-      headers.Authorization = `Bearer ${this.token}`
+    // Only set JSON content-type when body is JSON (and not FormData)
+    const hasBody = options.body !== undefined && options.body !== null
+    const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData
+
+    if (hasBody && !isFormData) {
+      // Respect an existing Content-Type if caller set it
+      const existing =
+        (headers as Record<string, string>)["Content-Type"] ||
+        (headers as Record<string, string>)["content-type"]
+
+      if (!existing) {
+        ;(headers as Record<string, string>)["Content-Type"] = "application/json"
+      }
     }
+
+    if (this.token) {
+      ;(headers as Record<string, string>)["Authorization"] = `Bearer ${this.token}`
+    }
+
+    return headers
+  }
+
+  private async parseResponse<T>(response: Response): Promise<T> {
+    const contentType = response.headers.get("content-type") || ""
+
+    if (contentType.includes("application/json")) {
+      return (await response.json()) as T
+    }
+
+    // Some endpoints may return empty body (204) or text
+    if (response.status === 204) return undefined as T
+    const text = await response.text()
+    return text as unknown as T
+  }
+
+  async request<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const url = `${API_BASE_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`
+    const headers = this.buildHeaders(options)
 
     try {
       console.log("[v0] API Request:", {
         method: options.method || "GET",
-        url: `${API_BASE_URL}${endpoint}`,
+        url,
         hasToken: !!this.token,
       })
 
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        ...options,
-        headers,
-      })
+      const response = await fetch(url, { ...options, headers })
 
       console.log("[v0] API Response status:", response.status, response.statusText)
 
       if (!response.ok) {
-        let errorMessage = "API Error"
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`
+
         try {
-          const errorData = await response.json()
-          errorMessage = errorData.message || errorData.error || "API Error"
-        } catch (e) {
-          errorMessage = `HTTP ${response.status}: ${response.statusText}`
+          const data = (await this.parseResponse<ApiErrorPayload>(response)) ?? {}
+          errorMessage = data.message || data.error || errorMessage
+        } catch {
+          // keep fallback message
         }
+
         throw new Error(errorMessage)
       }
 
-      return response.json()
+      return await this.parseResponse<T>(response)
     } catch (error) {
-      if (error instanceof TypeError && error.message.includes("fetch")) {
+      // Network / CORS / DNS / refused connection errors often come as TypeError in fetch
+      if (error instanceof TypeError) {
         console.error("[v0] Fetch error - Backend may not be running at:", API_BASE_URL)
-        throw new Error(`No se puede conectar al servidor. Verifica que el backend esté corriendo en ${API_BASE_URL}`)
+        throw new Error(
+          `No se puede conectar al servidor. Verifica que el backend esté corriendo en ${API_BASE_URL}`
+        )
       }
       console.error("[v0] API Error:", error)
       throw error
@@ -70,16 +116,27 @@ export class APIClient {
 
   // Products endpoints
   async getProducts(page = 1, limit = 20, q = "") {
-    return this.request(`/products?page=${page}&limit=${limit}&q=${q}`)
+    const qs = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+      ...(q ? { q } : {}),
+    }).toString()
+
+    return this.request(`/products?${qs}`)
   }
 
   async getProduct(id: string) {
-    return this.request(`/products/${id}`)
+    return this.request(`/products/${encodeURIComponent(id)}`)
   }
 
   // Admin products endpoints
   async adminGetProducts(page = 1, limit = 50) {
-    return this.request(`/admin/products?page=${page}&limit=${limit}`)
+    const qs = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    }).toString()
+
+    return this.request(`/admin/products?${qs}`)
   }
 
   async adminCreateProduct(data: any) {
@@ -90,14 +147,14 @@ export class APIClient {
   }
 
   async adminUpdateProduct(id: string, data: any) {
-    return this.request(`/admin/products/${id}`, {
+    return this.request(`/admin/products/${encodeURIComponent(id)}`, {
       method: "PUT",
       body: JSON.stringify(data),
     })
   }
 
   async adminDeleteProduct(id: string) {
-    return this.request(`/admin/products/${id}`, {
+    return this.request(`/admin/products/${encodeURIComponent(id)}`, {
       method: "DELETE",
     })
   }
@@ -111,7 +168,7 @@ export class APIClient {
   }
 
   async adminUpdateUserRole(userId: string, role: string) {
-    return this.request(`/admin/users/${userId}/role`, {
+    return this.request(`/admin/users/${encodeURIComponent(userId)}/role`, {
       method: "PUT",
       body: JSON.stringify({ role }),
     })
@@ -122,7 +179,7 @@ export class APIClient {
   }
 
   async adminUpdateOrderStatus(orderId: string, status: string) {
-    return this.request(`/admin/orders/${orderId}/status`, {
+    return this.request(`/admin/orders/${encodeURIComponent(orderId)}/status`, {
       method: "PUT",
       body: JSON.stringify({ status }),
     })
@@ -149,46 +206,43 @@ export class APIClient {
   }
 
   async getOrder(orderId: string) {
-    return this.request(`/orders/${orderId}`)
+    return this.request(`/orders/${encodeURIComponent(orderId)}`)
   }
 
   async downloadInvoice(orderId: string) {
+    const url = `${API_BASE_URL}/orders/${encodeURIComponent(orderId)}/download`
+
     const headers: HeadersInit = {}
-    
     if (this.token) {
-      headers.Authorization = `Bearer ${this.token}`
+      ;(headers as Record<string, string>)["Authorization"] = `Bearer ${this.token}`
     }
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/download`, {
-        headers,
-      })
+    const response = await fetch(url, { headers })
 
-      if (!response.ok) {
-        throw new Error('Error al descargar el archivo')
-      }
-
-      // Obtener el nombre del archivo del header Content-Disposition
-      const contentDisposition = response.headers.get('Content-Disposition')
-      let filename = 'factura.pdf'
-      
-      if (contentDisposition) {
-        const match = contentDisposition.match(/filename="?([^"]+)"?/)
-        if (match) filename = match[1]
-      }
-
-      // Convertir a blob y descargar
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error('Error descargando factura:', error)
-      throw error
+    if (!response.ok) {
+      throw new Error(`Error al descargar el archivo (HTTP ${response.status})`)
     }
+
+    const contentDisposition = response.headers.get("Content-Disposition")
+    let filename = "factura.pdf"
+
+    if (contentDisposition) {
+      // supports filename* (RFC 5987) and filename
+      const fnStar = contentDisposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i)
+      const fn = contentDisposition.match(/filename\s*=\s*"?([^"]+)"?/i)
+      if (fnStar?.[1]) filename = decodeURIComponent(fnStar[1])
+      else if (fn?.[1]) filename = fn[1]
+    }
+
+    const blob = await response.blob()
+    const objectUrl = window.URL.createObjectURL(blob)
+
+    const a = document.createElement("a")
+    a.href = objectUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    window.URL.revokeObjectURL(objectUrl)
   }
+}
