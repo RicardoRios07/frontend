@@ -3,7 +3,7 @@
 
 import type React from "react"
 import { createContext, useContext, useEffect, useMemo, useState } from "react"
-import { apiClient } from "./api-client" 
+import { apiClient } from "./api-client"
 
 export interface User {
   id: string
@@ -25,7 +25,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const apiClientAuth = useMemo(() => new apiClient(), []) // guarantees setToken exists
+  // const apiClientAuth = useMemo(() => new ApiClient(), []) // No longer needed
+  const apiClientAuth = apiClient
 
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
@@ -42,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     setIsLoading(false)
-  }, [apiClient])
+  }, [])
 
   const login = async (email: string, password: string) => {
     setIsLoading(true)

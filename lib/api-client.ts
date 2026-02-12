@@ -10,7 +10,7 @@ type ApiErrorPayload = {
   errors?: unknown
 }
 
-export class apiClient {
+export class ApiClient {
   private token: string | null = null
 
   setToken(token: string | null) {
@@ -33,12 +33,12 @@ export class apiClient {
         (headers as Record<string, string>)["content-type"]
 
       if (!existing) {
-        ;(headers as Record<string, string>)["Content-Type"] = "application/json"
+        ; (headers as Record<string, string>)["Content-Type"] = "application/json"
       }
     }
 
     if (this.token) {
-      ;(headers as Record<string, string>)["Authorization"] = `Bearer ${this.token}`
+      ; (headers as Record<string, string>)["Authorization"] = `Bearer ${this.token}`
     }
 
     return headers
@@ -214,7 +214,7 @@ export class apiClient {
 
     const headers: HeadersInit = {}
     if (this.token) {
-      ;(headers as Record<string, string>)["Authorization"] = `Bearer ${this.token}`
+      ; (headers as Record<string, string>)["Authorization"] = `Bearer ${this.token}`
     }
 
     const response = await fetch(url, { headers })
@@ -246,3 +246,5 @@ export class apiClient {
     window.URL.revokeObjectURL(objectUrl)
   }
 }
+
+export const apiClient = new ApiClient()
