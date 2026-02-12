@@ -17,6 +17,17 @@ export class ApiClient {
     this.token = token
   }
 
+  getFileUrl(path: string) {
+    if (!path) return ""
+    if (path.startsWith("http")) return path
+
+    // Remove /api from base URL if present to get root
+    const baseUrl = API_BASE_URL.replace(/\/api$/, "")
+    const cleanPath = path.startsWith("/") ? path : `/${path}`
+
+    return `${baseUrl}${cleanPath}`
+  }
+
   private buildHeaders(options: RequestInit): HeadersInit {
     const headers: HeadersInit = {
       ...options.headers,
